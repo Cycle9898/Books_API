@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/api/v1/books')]
@@ -59,6 +60,23 @@ class BookController extends AbstractController
         $jsonBook = $serializer->serialize($book, 'json', ['groups' => "getBooks"]);
 
         return new JsonResponse($jsonBook, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('/{id}', name: 'app_book_update', requirements: ['id' => '\d+'], methods: ['PUT'])]
+    public function updateBook(Request $request, Book $currentBook, SerializerInterface $serializer, EntityManagerInterface $manager, AuthorRepository $authorRepo): JsonResponse
+    {
+        $updatedBook = $serializer->deserialize($request->getContent(), Book::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $currentBook]);
+
+        // try to associate the book and the author from author id of the request
+        $content = $request->toArray();
+        $idAuthor = intval($content['idAuthor']) ?? -1;
+
+        $updatedBook->setAuthor($authorRepo->find($idAuthor));
+
+        $manager->persist($updatedBook);
+        $manager->flush();
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}', name: 'app_book_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
