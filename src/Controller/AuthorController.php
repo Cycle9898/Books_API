@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Author;
 use App\Repository\AuthorRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,5 +29,14 @@ class AuthorController extends AbstractController
         $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => 'getAuthors']);
 
         return new JsonResponse($jsonAuthor, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('/{id}', name: 'app_author_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
+    public function deleteAuthor(Author $author, EntityManagerInterface $manager): JsonResponse
+    {
+        $manager->remove($author);
+        $manager->flush();
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 }
