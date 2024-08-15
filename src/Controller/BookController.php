@@ -3,12 +3,15 @@
 namespace App\Controller;
 
 use App\Entity\Book;
+use App\Repository\AuthorRepository;
 use App\Repository\BookRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/api/v1/books')]
@@ -21,6 +24,33 @@ class BookController extends AbstractController
         $jsonBooksList = $serializer->serialize($booksList, 'json', ['groups' => "getBooks"]);
 
         return new JsonResponse($jsonBooksList, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('', name: 'app_book_create', methods: ['POST'])]
+    public function createBook(
+        Request $request,
+        SerializerInterface $serializer,
+        EntityManagerInterface $manager,
+        UrlGeneratorInterface $urlGen,
+        AuthorRepository $authorRepo
+    ): JsonResponse {
+        $book = $serializer->deserialize($request->getContent(), Book::class, 'json');
+
+        // try to associate the book and the author from author id of the request
+        $content = $request->toArray();
+        $idAuthor = intval($content['idAuthor']) ?? -1;
+
+        $book->setAuthor($authorRepo->find($idAuthor));
+
+        $manager->persist($book);
+        $manager->flush();
+
+
+        $jsonBook = $serializer->serialize($book, 'json', ['groups' => 'getBooks']);
+
+        $location = $urlGen->generate('app_book_detail', ['id' => $book->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonBook, Response::HTTP_CREATED, ['location' => $location], true);
     }
 
     #[Route('/{id}', name: 'app_book_detail', requirements: ['id' => '\d+'], methods: ['GET'])]
