@@ -10,10 +10,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/v1/books')]
 class BookController extends AbstractController
@@ -33,9 +35,17 @@ class BookController extends AbstractController
         SerializerInterface $serializer,
         EntityManagerInterface $manager,
         UrlGeneratorInterface $urlGen,
-        AuthorRepository $authorRepo
+        AuthorRepository $authorRepo,
+        ValidatorInterface $validator
     ): JsonResponse {
         $book = $serializer->deserialize($request->getContent(), Book::class, 'json');
+
+        // check errors
+        $errors = $validator->validate($book);
+
+        if ($errors->count() > 0) {
+            throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, $errors[0]->getMessage());
+        }
 
         // try to associate the book and the author from author id of the request
         $content = $request->toArray();
@@ -63,9 +73,22 @@ class BookController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_book_update', requirements: ['id' => '\d+'], methods: ['PUT'])]
-    public function updateBook(Request $request, Book $currentBook, SerializerInterface $serializer, EntityManagerInterface $manager, AuthorRepository $authorRepo): JsonResponse
-    {
+    public function updateBook(
+        Request $request,
+        Book $currentBook,
+        SerializerInterface $serializer,
+        EntityManagerInterface $manager,
+        AuthorRepository $authorRepo,
+        ValidatorInterface $validator
+    ): JsonResponse {
         $updatedBook = $serializer->deserialize($request->getContent(), Book::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $currentBook]);
+
+        // check errors
+        $errors = $validator->validate($updatedBook);
+
+        if ($errors->count() > 0) {
+            throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, $errors[0]->getMessage());
+        }
 
         // try to associate the book and the author from author id of the request
         $content = $request->toArray();
