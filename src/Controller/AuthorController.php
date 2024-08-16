@@ -9,10 +9,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/v1/authors')]
 class AuthorController extends AbstractController
@@ -27,9 +29,21 @@ class AuthorController extends AbstractController
     }
 
     #[Route('', name: 'app_author_create', methods: ['POST'])]
-    public function createAuthor(Request $request, SerializerInterface $serializer, EntityManagerInterface $manager, UrlGeneratorInterface $urlGen): JsonResponse
-    {
+    public function createAuthor(
+        Request $request,
+        SerializerInterface $serializer,
+        EntityManagerInterface $manager,
+        UrlGeneratorInterface $urlGen,
+        ValidatorInterface $validator
+    ): JsonResponse {
         $author = $serializer->deserialize($request->getContent(), Author::class, 'json');
+
+        // check errors
+        $errors = $validator->validate($author);
+
+        if ($errors->count() > 0) {
+            throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, $errors[0]->getMessage());
+        }
 
         $manager->persist($author);
         $manager->flush();
@@ -50,9 +64,21 @@ class AuthorController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_author_update', requirements: ['id' => '\d+'], methods: ['PUT'])]
-    public function updateAuthor(Request $request, Author $currentAuthor, SerializerInterface $serializer, EntityManagerInterface $manager): JsonResponse
-    {
+    public function updateAuthor(
+        Request $request,
+        Author $currentAuthor,
+        SerializerInterface $serializer,
+        EntityManagerInterface $manager,
+        ValidatorInterface $validator
+    ): JsonResponse {
         $updatedAuthor = $serializer->deserialize($request->getContent(), Author::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $currentAuthor]);
+
+        // check errors
+        $errors = $validator->validate($updatedAuthor);
+
+        if ($errors->count() > 0) {
+            throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, $errors[0]->getMessage());
+        }
 
         $manager->persist($updatedAuthor);
         $manager->flush();
