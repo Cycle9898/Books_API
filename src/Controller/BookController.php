@@ -39,7 +39,7 @@ class BookController extends AbstractController
 
         // try to associate the book and the author from author id of the request
         $content = $request->toArray();
-        $idAuthor = intval($content['idAuthor']) ?? -1;
+        $idAuthor = $content['idAuthor'] ?? -1;
 
         $book->setAuthor($authorRepo->find($idAuthor));
 
@@ -69,7 +69,7 @@ class BookController extends AbstractController
 
         // try to associate the book and the author from author id of the request
         $content = $request->toArray();
-        $idAuthor = intval($content['idAuthor']) ?? -1;
+        $idAuthor = $content['idAuthor'] ?? -1;
 
         $updatedBook->setAuthor($authorRepo->find($idAuthor));
 
