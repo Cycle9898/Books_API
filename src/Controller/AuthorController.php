@@ -16,12 +16,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 #[Route('/api/v1/authors')]
 class AuthorController extends AbstractController
 {
     #[Route('', name: 'app_authors', methods: ['GET'])]
-    public function getAuthorsList(AuthorRepository $authorRepo, SerializerInterface $serializer, Request $request): JsonResponse
+    public function getAuthorsList(AuthorRepository $authorRepo, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
@@ -30,9 +32,15 @@ class AuthorController extends AbstractController
             throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, "Page and limit query parameters must be digits !");
         }
 
-        $authorsList = $authorRepo->findAllWithPagination($page, $limit);
+        $idCache = "getAuthorsList-" . $page . "-" . $limit;
 
-        $jsonAuthorsList = $serializer->serialize($authorsList, 'json', ['groups' => 'getAuthors']);
+        $jsonAuthorsList = $cachePool->get($idCache, function (ItemInterface $item) use ($serializer, $authorRepo, $page, $limit) {
+            $item->tag("authorsCache");
+
+            $authorsList = $authorRepo->findAllWithPagination($page, $limit);
+
+            return $serializer->serialize($authorsList, 'json', ['groups' => 'getAuthors']);
+        });
 
         return new JsonResponse($jsonAuthorsList, Response::HTTP_OK, [], true);
     }
@@ -44,7 +52,8 @@ class AuthorController extends AbstractController
         SerializerInterface $serializer,
         EntityManagerInterface $manager,
         UrlGeneratorInterface $urlGen,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        TagAwareCacheInterface $cachePool
     ): JsonResponse {
         $author = $serializer->deserialize($request->getContent(), Author::class, 'json');
 
@@ -57,6 +66,9 @@ class AuthorController extends AbstractController
 
         $manager->persist($author);
         $manager->flush();
+
+        // clear cache
+        $cachePool->invalidateTags(["authorsCache"]);
 
         $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => 'getAuthors']);
 
@@ -80,7 +92,8 @@ class AuthorController extends AbstractController
         Author $currentAuthor,
         SerializerInterface $serializer,
         EntityManagerInterface $manager,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        TagAwareCacheInterface $cachePool
     ): JsonResponse {
         $updatedAuthor = $serializer->deserialize($request->getContent(), Author::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $currentAuthor]);
 
@@ -94,15 +107,21 @@ class AuthorController extends AbstractController
         $manager->persist($updatedAuthor);
         $manager->flush();
 
+        // clear cache
+        $cachePool->invalidateTags(["authorsCache"]);
+
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}', name: 'app_author_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to delete an author')]
-    public function deleteAuthor(Author $author, EntityManagerInterface $manager): JsonResponse
+    public function deleteAuthor(Author $author, EntityManagerInterface $manager, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $manager->remove($author);
         $manager->flush();
+
+        // clear cache
+        $cachePool->invalidateTags(["authorsCache"]);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
