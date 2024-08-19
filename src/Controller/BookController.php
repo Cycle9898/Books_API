@@ -22,9 +22,17 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class BookController extends AbstractController
 {
     #[Route('', name: 'app_books', methods: ['GET'])]
-    public function getBooksList(BookRepository $bookRepo, SerializerInterface $serializer): JsonResponse
+    public function getBooksList(BookRepository $bookRepo, SerializerInterface $serializer, Request $request): JsonResponse
     {
-        $booksList = $bookRepo->findAll();
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+
+        if (!is_numeric($page) || !is_numeric($limit)) {
+            throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, "Page and limit query parameters must be digits !");
+        }
+
+        $booksList = $bookRepo->findAllWithPagination($page, $limit);
+
         $jsonBooksList = $serializer->serialize($booksList, 'json', ['groups' => "getBooks"]);
 
         return new JsonResponse($jsonBooksList, Response::HTTP_OK, [], true);
