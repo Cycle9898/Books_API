@@ -17,12 +17,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 #[Route('/api/v1/books')]
 class BookController extends AbstractController
 {
     #[Route('', name: 'app_books', methods: ['GET'])]
-    public function getBooksList(BookRepository $bookRepo, SerializerInterface $serializer, Request $request): JsonResponse
+    public function getBooksList(BookRepository $bookRepo, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
@@ -31,9 +33,15 @@ class BookController extends AbstractController
             throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, "Page and limit query parameters must be digits !");
         }
 
-        $booksList = $bookRepo->findAllWithPagination($page, $limit);
+        $idCache = "getBooksList-" . $page . "-" . $limit;
 
-        $jsonBooksList = $serializer->serialize($booksList, 'json', ['groups' => "getBooks"]);
+        $jsonBooksList = $cachePool->get($idCache, function (ItemInterface $item) use ($serializer, $bookRepo, $page, $limit) {
+            $item->tag("booksCache");
+
+            $booksList = $bookRepo->findAllWithPagination($page, $limit);
+
+            return $serializer->serialize($booksList, 'json', ['groups' => "getBooks"]);
+        });
 
         return new JsonResponse($jsonBooksList, Response::HTTP_OK, [], true);
     }
@@ -46,7 +54,8 @@ class BookController extends AbstractController
         EntityManagerInterface $manager,
         UrlGeneratorInterface $urlGen,
         AuthorRepository $authorRepo,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        TagAwareCacheInterface $cachePool
     ): JsonResponse {
         $book = $serializer->deserialize($request->getContent(), Book::class, 'json');
 
@@ -66,6 +75,8 @@ class BookController extends AbstractController
         $manager->persist($book);
         $manager->flush();
 
+        // clear cache
+        $cachePool->invalidateTags(["booksCache"]);
 
         $jsonBook = $serializer->serialize($book, 'json', ['groups' => 'getBooks']);
 
@@ -90,7 +101,8 @@ class BookController extends AbstractController
         SerializerInterface $serializer,
         EntityManagerInterface $manager,
         AuthorRepository $authorRepo,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        TagAwareCacheInterface $cachePool
     ): JsonResponse {
         $updatedBook = $serializer->deserialize($request->getContent(), Book::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $currentBook]);
 
@@ -110,15 +122,21 @@ class BookController extends AbstractController
         $manager->persist($updatedBook);
         $manager->flush();
 
+        // clear cache
+        $cachePool->invalidateTags(["booksCache"]);
+
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}', name: 'app_book_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to delete a book')]
-    public function deleteBook(Book $book, EntityManagerInterface $manager): JsonResponse
+    public function deleteBook(Book $book, EntityManagerInterface $manager, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $manager->remove($book);
         $manager->flush();
+
+        // clear cache
+        $cachePool->invalidateTags(["booksCache"]);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
