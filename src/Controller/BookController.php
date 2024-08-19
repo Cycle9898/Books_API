@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -30,6 +31,7 @@ class BookController extends AbstractController
     }
 
     #[Route('', name: 'app_book_create', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to create a book')]
     public function createBook(
         Request $request,
         SerializerInterface $serializer,
@@ -73,6 +75,7 @@ class BookController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_book_update', requirements: ['id' => '\d+'], methods: ['PUT'])]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to modify a book')]
     public function updateBook(
         Request $request,
         Book $currentBook,
@@ -103,6 +106,7 @@ class BookController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_book_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to delete a book')]
     public function deleteBook(Book $book, EntityManagerInterface $manager): JsonResponse
     {
         $manager->remove($book);
