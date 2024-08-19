@@ -21,9 +21,17 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class AuthorController extends AbstractController
 {
     #[Route('', name: 'app_authors', methods: ['GET'])]
-    public function getAuthorsList(AuthorRepository $authorRepo, SerializerInterface $serializer): JsonResponse
+    public function getAuthorsList(AuthorRepository $authorRepo, SerializerInterface $serializer, Request $request): JsonResponse
     {
-        $authorsList = $authorRepo->findAll();
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+
+        if (!is_numeric($page) || !is_numeric($limit)) {
+            throw new HttpException(JsonResponse::HTTP_BAD_REQUEST, "Page and limit query parameters must be digits !");
+        }
+
+        $authorsList = $authorRepo->findAllWithPagination($page, $limit);
+
         $jsonAuthorsList = $serializer->serialize($authorsList, 'json', ['groups' => 'getAuthors']);
 
         return new JsonResponse($jsonAuthorsList, Response::HTTP_OK, [], true);
