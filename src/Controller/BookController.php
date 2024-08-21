@@ -19,7 +19,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
-#[Route('/api/v1/books')]
+#[Route('/api/books')]
 class BookController extends AbstractController
 {
     #[Route('', name: 'app_books', methods: ['GET'])]

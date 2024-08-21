@@ -18,7 +18,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
-#[Route('/api/v1/authors')]
+#[Route('/api/authors')]
 class AuthorController extends AbstractController
 {
     #[Route('', name: 'app_authors', methods: ['GET'])]
