@@ -5,7 +5,6 @@ namespace App\Entity;
 use App\Repository\BookRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
@@ -14,22 +13,18 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    #[Groups(["getBooks", "getAuthors"])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(["getBooks", "getAuthors"])]
     #[Assert\NotBlank(message: "The title is required")]
     #[Assert\Length(min: 1, max: 255, minMessage: "The title must have at least {{ limit }} characters", maxMessage: "The title cannot be longer than {{ limit }} characters")]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(["getBooks", "getAuthors"])]
     private ?string $coverText = null;
 
     #[ORM\ManyToOne(targetEntity: Author::class, inversedBy: 'books')]
     #[ORM\JoinColumn(onDelete: "CASCADE")]
-    #[Groups(["getBooks"])]
     private ?Author $author = null;
 
     public function getId(): ?int
