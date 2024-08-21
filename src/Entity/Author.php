@@ -6,7 +6,6 @@ use App\Repository\AuthorRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: AuthorRepository::class)]
@@ -15,15 +14,12 @@ class Author
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    #[Groups(["getBooks", "getAuthors"])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    #[Groups(["getBooks", "getAuthors"])]
     private ?string $firstName = null;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(["getBooks", "getAuthors"])]
     #[Assert\NotBlank(message: "Author 's last name is required")]
     #[Assert\Length(min: 1, max: 255, minMessage: "Author 's last name must have at least {{ limit }} characters", maxMessage: "Author 's last name cannot be longer than {{ limit }} characters")]
     private ?string $lastName = null;
@@ -32,7 +28,6 @@ class Author
      * @var Collection<int, Book>
      */
     #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'author')]
-    #[Groups(["getAuthors"])]
     private Collection $books;
 
     public function __construct()
