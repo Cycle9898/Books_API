@@ -115,6 +115,7 @@ class BookController extends AbstractController
 
         $currentBook->setTitle($newBook->getTitle());
         $currentBook->setCoverText($newBook->getCoverText());
+        $currentBook->setComment($newBook->getComment());
 
         // check errors
         $errors = $validator->validate($currentBook);
