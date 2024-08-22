@@ -5,7 +5,9 @@ namespace App\Controller;
 use App\Entity\Book;
 use App\Repository\AuthorRepository;
 use App\Repository\BookRepository;
+use App\Service\VersioningService;
 use Doctrine\ORM\EntityManagerInterface;
+use JMS\Serializer\SerializationContext;
 use JMS\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,7 +25,7 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 class BookController extends AbstractController
 {
     #[Route('', name: 'app_books', methods: ['GET'])]
-    public function getBooksList(BookRepository $bookRepo, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cache): JsonResponse
+    public function getBooksList(BookRepository $bookRepo, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cache, VersioningService $versioningService): JsonResponse
     {
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
@@ -34,12 +36,15 @@ class BookController extends AbstractController
 
         $idCache = "getBooksList-" . $page . "-" . $limit;
 
-        $jsonBooksList = $cache->get($idCache, function (ItemInterface $item) use ($serializer, $bookRepo, $page, $limit) {
+        $jsonBooksList = $cache->get($idCache, function (ItemInterface $item) use ($serializer, $bookRepo, $page, $limit, $versioningService) {
             $item->tag("booksCache");
 
             $booksList = $bookRepo->findAllWithPagination($page, $limit);
 
-            return $serializer->serialize($booksList, 'json');
+            $version = $versioningService->getAPIVersion();
+
+            $context = SerializationContext::create()->setVersion($version);
+            return $serializer->serialize($booksList, 'json', $context);
         });
 
         return new JsonResponse($jsonBooksList, Response::HTTP_OK, [], true);
@@ -85,9 +90,12 @@ class BookController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_book_detail', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function getDetailBook(Book $book, SerializerInterface $serializer): JsonResponse
+    public function getDetailBook(Book $book, SerializerInterface $serializer, VersioningService $versioningService): JsonResponse
     {
-        $jsonBook = $serializer->serialize($book, 'json');
+        $version = $versioningService->getAPIVersion();
+
+        $context = SerializationContext::create()->setVersion($version);
+        $jsonBook = $serializer->serialize($book, 'json', $context);
 
         return new JsonResponse($jsonBook, Response::HTTP_OK, [], true);
     }
