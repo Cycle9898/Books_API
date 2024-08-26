@@ -38,7 +38,7 @@ class BookController extends AbstractController
      */
     #[OA\Response(
         response: 200,
-        description: "Get books list",
+        description: "Got books list",
         content: new OA\JsonContent(
             type: "array",
             items: new OA\Items(ref: new Model(type: Book::class))
@@ -55,6 +55,16 @@ class BookController extends AbstractController
         in: "query",
         description: "The page number",
         schema: new OA\Schema(type: "int")
+    )]
+    #[OA\Response(
+        response: 400,
+        description: "When query parameters are invalid",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'status', type: 'int'),
+                new OA\Property(property: 'message', type: 'string')
+            ]
+        )
     )]
     #[OA\Tag(name: "Books")]
     #[Route('', name: 'app_books', methods: ['GET'])]
@@ -101,7 +111,6 @@ class BookController extends AbstractController
         content: new Model(type: Book::class)
     )]
     #[OA\RequestBody(content: new OA\JsonContent(
-        type: 'object',
         properties: [
             new OA\Property(property: 'title', type: 'string'),
             new OA\Property(property: 'coverText', type: 'string'),
@@ -109,6 +118,16 @@ class BookController extends AbstractController
             new OA\Property(property: 'comment', type: 'string')
         ]
     ))]
+    #[OA\Response(
+        response: 400,
+        description: "When data in request body are invalid",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'status', type: 'int'),
+                new OA\Property(property: 'message', type: 'string')
+            ]
+        )
+    )]
     #[OA\Tag(name: "Books")]
     #[Route('', name: 'app_book_create', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to create a book')]
@@ -212,6 +231,16 @@ class BookController extends AbstractController
             new OA\Property(property: 'comment', type: 'string')
         ]
     ))]
+    #[OA\Response(
+        response: 400,
+        description: "When data in request body are invalid",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'status', type: 'int'),
+                new OA\Property(property: 'message', type: 'string')
+            ]
+        )
+    )]
     #[OA\Tag(name: "Books")]
     #[Route('/{id}', name: 'app_book_update', requirements: ['id' => '\d+'], methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to modify a book')]
