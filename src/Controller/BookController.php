@@ -178,7 +178,7 @@ class BookController extends AbstractController
      */
     #[OA\Response(
         response: 200,
-        description: "Get a book details",
+        description: "Got a book details",
         content: new Model(type: Book::class)
     )]
     #[OA\Parameter(
@@ -223,7 +223,6 @@ class BookController extends AbstractController
         schema: new OA\Schema(type: 'int')
     )]
     #[OA\RequestBody(content: new OA\JsonContent(
-        type: 'object',
         properties: [
             new OA\Property(property: 'title', type: 'string'),
             new OA\Property(property: 'coverText', type: 'string'),

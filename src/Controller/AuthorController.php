@@ -6,6 +6,8 @@ use App\Entity\Author;
 use App\Repository\AuthorRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializerInterface;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,6 +23,46 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 #[Route('/api/authors')]
 class AuthorController extends AbstractController
 {
+    /**
+     * This method is used to get all the authors
+     * 
+     * @param AuthorRepository $authorRepo
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @param TagAwareCacheInterface $cache
+     * @return JsonResponse
+     */
+    #[OA\Response(
+        response: 200,
+        description: "Got authors list",
+        content: new OA\JsonContent(
+            type: "array",
+            items: new OA\Items(ref: new Model(type: Author::class))
+        )
+    )]
+    #[OA\Parameter(
+        name: "page",
+        in: "query",
+        description: "The number of results per page",
+        schema: new OA\Schema(type: "int")
+    )]
+    #[OA\Parameter(
+        name: "limit",
+        in: "query",
+        description: "The page number",
+        schema: new OA\Schema(type: "int")
+    )]
+    #[OA\Response(
+        response: 400,
+        description: "When query parameters are invalid",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'status', type: 'int'),
+                new OA\Property(property: 'message', type: 'string')
+            ]
+        )
+    )]
+    #[OA\Tag(name: "Authors")]
     #[Route('', name: 'app_authors', methods: ['GET'])]
     public function getAuthorsList(AuthorRepository $authorRepo, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cache): JsonResponse
     {
@@ -44,6 +86,39 @@ class AuthorController extends AbstractController
         return new JsonResponse($jsonAuthorsList, Response::HTTP_OK, [], true);
     }
 
+    /**
+     * This method is used to create a new author
+     * 
+     * @param Request $request
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $manager
+     * @param UrlGeneratorInterface $urlGen
+     * @param ValidatorInterface $validator
+     * @param TagAwareCacheInterface $cache
+     * @return JsonResponse
+     */
+    #[OA\Response(
+        response: 201,
+        description: "created a new author",
+        content: new Model(type: Author::class)
+    )]
+    #[OA\RequestBody(content: new OA\JsonContent(
+        properties: [
+            new OA\Property(property: 'firstName', type: 'string'),
+            new OA\Property(property: 'lastName', type: 'string')
+        ]
+    ))]
+    #[OA\Response(
+        response: 400,
+        description: "When data in request body are invalid",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'status', type: 'int'),
+                new OA\Property(property: 'message', type: 'string')
+            ]
+        )
+    )]
+    #[OA\Tag(name: "Authors")]
     #[Route('', name: 'app_author_create', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to create an author')]
     public function createAuthor(
@@ -76,6 +151,25 @@ class AuthorController extends AbstractController
         return new JsonResponse($jsonAuthor, Response::HTTP_CREATED, ['location' => $location], true);
     }
 
+    /**
+     * This method is used to get an author details
+     * 
+     * @param Author $author
+     * @param SerializerInterface $serializer
+     * @return JsonResponse
+     */
+    #[OA\Response(
+        response: 200,
+        description: "Got an authors details",
+        content: new Model(type: Author::class)
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        description: 'ID of the author',
+        schema: new OA\Schema(type: 'int')
+    )]
+    #[OA\Tag(name: "Authors")]
     #[Route('/{id}', name: 'app_author_detail', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function getDetailAuthor(Author $author, SerializerInterface $serializer): JsonResponse
     {
@@ -84,6 +178,45 @@ class AuthorController extends AbstractController
         return new JsonResponse($jsonAuthor, Response::HTTP_OK, [], true);
     }
 
+    /**
+     * This method is used to edit an author
+     * 
+     * @param Request $request
+     * @param Author $currentAuthor
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $manager
+     * @param ValidatorInterface $validator
+     * @param TagAwareCacheInterface $cache
+     * @return JsonResponse
+     */
+    #[OA\Response(
+        response: 204,
+        description: "edited an author",
+        content: null
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        description: 'ID of the author',
+        schema: new OA\Schema(type: 'int')
+    )]
+    #[OA\RequestBody(content: new OA\JsonContent(
+        properties: [
+            new OA\Property(property: 'firstName', type: 'string'),
+            new OA\Property(property: 'lastName', type: 'string')
+        ]
+    ))]
+    #[OA\Response(
+        response: 400,
+        description: "When data in request body are invalid",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'status', type: 'int'),
+                new OA\Property(property: 'message', type: 'string')
+            ]
+        )
+    )]
+    #[OA\Tag(name: "Authors")]
     #[Route('/{id}', name: 'app_author_update', requirements: ['id' => '\d+'], methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to modify an author')]
     public function updateAuthor(
@@ -115,6 +248,26 @@ class AuthorController extends AbstractController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
+    /**
+     * This method is used to delete an author
+     * 
+     * @param Author $author
+     * @param EntityManagerInterface $manager
+     * @param TagAwareCacheInterface $cache
+     * @return JsonResponse
+     */
+    #[OA\Response(
+        response: 204,
+        description: "deleted an author",
+        content: null
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        description: 'ID of the author',
+        schema: new OA\Schema(type: 'int')
+    )]
+    #[OA\Tag(name: "Authors")]
     #[Route('/{id}', name: 'app_author_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to delete an author')]
     public function deleteAuthor(Author $author, EntityManagerInterface $manager, TagAwareCacheInterface $cache): JsonResponse
